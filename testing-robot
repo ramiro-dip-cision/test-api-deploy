@@ -1,0 +1,33 @@
+import requests
+import json
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def get_git_action_results(action_id, token):
+    url = "https://api.github.com/repos/{}/{}/actions/runs?per_page=1".format(
+        "Cision-Distribution", "nb-alertrobot"
+    )
+    headers = {"Authorization": "bearer {}".format(token)}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        data = json.loads(response.content)
+        return data
+    else:
+        return None
+        
+def get_prometheus_metrics(data):
+    metrics = {}
+    for step in data["workflow_runs"]:
+        if step["status"] == "completed":
+            metrics["run_number"] = step["run_number"]
+            metrics["step_result"] = step["conclusion"]
+    return metrics
+    
+if __name__ == "__main__":
+    action_id = "1234567890"
+    token = "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"
+    data = get_git_action_results(action_id, token)
+    metrics = get_prometheus_metrics(data)
+    print(json.dumps(metrics))
